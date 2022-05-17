@@ -5,6 +5,7 @@ import org.quartz.impl.StdSchedulerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.sql.*;
 import java.util.Properties;
 
 import static org.quartz.JobBuilder.newJob;
@@ -12,11 +13,11 @@ import static org.quartz.SimpleScheduleBuilder.simpleSchedule;
 import static org.quartz.TriggerBuilder.newTrigger;
 
 /**
- * Класс описывает вывод сообщения в консоль каждые 10 секунд.
+ * Класс описывает работу планировщика с БД.
  * Работает через библиотеку http://www.quartz-scheduler.org/.
  *
  * @author Svistunov Mikhail
- * @version 1.0
+ * @version 1.1
  */
 public class AlertRabbit {
     /**
@@ -25,7 +26,11 @@ public class AlertRabbit {
      * scheduler.start();
      * Начало работы происходит с создания класса управляющего всеми работами.
      * В объект Scheduler мы будем добавлять задачи, которые хотим выполнять периодически.
-     * 2. Создание задачи. JobDetail job = newJob(Rabbit.class).build().
+     * 2. Создание задачи.
+     * JobDataMap data = new JobDataMap();
+     * data.put("connection", cn);
+     * JobDetail job = newJob(Rabbit.class).usingJobData(data).build();
+     * При создании Job мы указываем параметры data. В них мы передаем ссылку на Connection.
      * quartz каждый раз создает объект с типом org.quartz.Job.
      * Нам нужно создать класс реализующий этот интерфейс. Внутри этого класса нужно описать требуемые действия.
      * В нашем случае - это вывод на консоль текста.
@@ -38,14 +43,22 @@ public class AlertRabbit {
      * Здесь можно указать, когда начинать запуск. Мы хотим сделать это сразу.
      * 5. Загрузка задачи и триггера в планировщик.
      * scheduler.scheduleJob(job, trigger);
+     * 6. Thread.sleep(10000);
+     * scheduler.shutdown();
+     * Весь main должен работать 10 секунд.
      *
      * @param args аргументы
      */
     public static void main(String[] args) {
-        try {
+        Properties config = properties();
+        try (Connection cn = getConnection(config)) {
             Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
             scheduler.start();
-            JobDetail job = newJob(Rabbit.class).build();
+            JobDataMap data = new JobDataMap();
+            data.put("connection", cn);
+            JobDetail job = newJob(Rabbit.class)
+                    .usingJobData(data)
+                    .build();
             SimpleScheduleBuilder times = simpleSchedule()
                     .withIntervalInSeconds(interval())
                     .repeatForever();
@@ -54,7 +67,9 @@ public class AlertRabbit {
                     .withSchedule(times)
                     .build();
             scheduler.scheduleJob(job, trigger);
-        } catch (SchedulerException e) {
+            Thread.sleep(10000);
+            scheduler.shutdown();
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -66,9 +81,32 @@ public class AlertRabbit {
      * В нашем случае - это вывод на консоль текста.
      */
     public static class Rabbit implements Job {
+        /**
+         * Каждый запуск Job вызывает конструктор.
+         */
+        public Rabbit() {
+            System.out.println(hashCode());
+        }
+
+        /**
+         * Метод записывает в таблицу время, когда выполнена Job.
+         * Чтобы получить объекты из context используется следующий вызов:
+         * Connection cn = (Connection) context.getJobDetail().getJobDataMap().get("connection");
+         *
+         * @param context контекст
+         * @throws JobExecutionException исключение
+         */
         @Override
         public void execute(JobExecutionContext context) throws JobExecutionException {
             System.out.println("Rabbit runs here...");
+            Connection cn = (Connection) context.getJobDetail().getJobDataMap().get("connection");
+            try (PreparedStatement ps = cn.prepareStatement(
+                    "insert into rabbit(created_date) values(?)")) {
+                ps.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+                ps.execute();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -88,5 +126,25 @@ public class AlertRabbit {
             e.printStackTrace();
         }
         return interval;
+    }
+
+    private static Connection getConnection(Properties config) throws SQLException, ClassNotFoundException {
+        Class.forName(config.getProperty("driver_class"));
+        return DriverManager.getConnection(
+                config.getProperty("url"),
+                config.getProperty("username"),
+                config.getProperty("password")
+        );
+    }
+
+    private static Properties properties() {
+        Properties config = new Properties();
+        try (InputStream in = AlertRabbit.class.getClassLoader().
+                getResourceAsStream("rabbit.properties")) {
+            config.load(in);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return config;
     }
 }
