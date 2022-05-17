@@ -52,6 +52,7 @@ public class AlertRabbit {
     public static void main(String[] args) {
         Properties config = properties();
         try (Connection cn = getConnection(config)) {
+            int interval = Integer.parseInt(config.getProperty("rabbit.interval"));
             Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
             scheduler.start();
             JobDataMap data = new JobDataMap();
@@ -60,7 +61,7 @@ public class AlertRabbit {
                     .usingJobData(data)
                     .build();
             SimpleScheduleBuilder times = simpleSchedule()
-                    .withIntervalInSeconds(interval())
+                    .withIntervalInSeconds(interval)
                     .repeatForever();
             Trigger trigger = newTrigger()
                     .startNow()
@@ -108,24 +109,6 @@ public class AlertRabbit {
                 e.printStackTrace();
             }
         }
-    }
-
-    /**
-     * Метод читает значение периода запуска в расписании из файла properties.
-     *
-     * @return значение периода запуска
-     */
-    private static int interval() {
-        int interval = -1;
-        Properties config = new Properties();
-        try (InputStream in = AlertRabbit.class.getClassLoader().
-                getResourceAsStream("rabbit.properties")) {
-            config.load(in);
-            interval = Integer.parseInt(config.getProperty("rabbit.interval"));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return interval;
     }
 
     private static Connection getConnection(Properties config) throws SQLException, ClassNotFoundException {
