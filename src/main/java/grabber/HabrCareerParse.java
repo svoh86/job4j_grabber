@@ -69,4 +69,11 @@ public class HabrCareerParse {
             });
         }
     }
+
+    private String retrieveDescription(String link) throws IOException {
+        Connection connection = Jsoup.connect(link);
+        Document document = connection.get();
+        Element descriptionElement = document.select(".job_show_description__vacancy_description").first();
+        return descriptionElement.text();
+    }
 }
