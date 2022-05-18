@@ -1,6 +1,7 @@
 package grabber.utils;
 
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 /**
  * Класс преобразовывает дату из формата career.habr.com "2022-05-18T10:15:30+03:00"
@@ -12,7 +13,6 @@ import java.time.LocalDateTime;
 public class HabrCareerDateTimeParser implements DateTimeParser {
     @Override
     public LocalDateTime parse(String parse) {
-        String rsl = parse.split("\\+")[0];
-        return LocalDateTime.parse(rsl);
+        return ZonedDateTime.parse(parse).toLocalDateTime();
     }
 }
