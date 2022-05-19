@@ -1,5 +1,7 @@
 package grabber;
 
+import grabber.utils.DateTimeParser;
+import grabber.utils.HabrCareerDateTimeParser;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -7,6 +9,9 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Класс описывает парсинг HTML страницы
@@ -16,13 +21,42 @@ import java.io.IOException;
  * @version 1.1
  * Добавлен парсинг первых 5 страниц.
  */
-public class HabrCareerParse {
+public class HabrCareerParse implements Parse {
     /**
-     * Две константы. Первая это ссылка на сайт в целом.
+     * Константы. Первая это ссылка на сайт в целом.
      * Вторая указывает на страницу с вакансиями непосредственно.
      */
     private static final String SOURCE_LINK = "https://career.habr.com";
     private static final String PAGE_LINK = String.format("%s/vacancies/java_developer?page=", SOURCE_LINK);
+    private final DateTimeParser dateTimeParser;
+
+    public HabrCareerParse(DateTimeParser dateTimeParser) {
+        this.dateTimeParser = dateTimeParser;
+    }
+
+    @Override
+    public List<Post> list(String link) throws IOException {
+        List<Post> posts = new ArrayList<>();
+        HabrCareerParse habrCareerParse = new HabrCareerParse(dateTimeParser);
+        for (int i = 1; i < 6; i++) {
+            Connection connection = Jsoup.connect(String.format("%s%s", link, i));
+            Document document = connection.get();
+            Elements rows = document.select(".vacancy-card__inner");
+            rows.forEach(row -> {
+                Element titleElement = row.select(".vacancy-card__title").first();
+                Element linkElement = titleElement.child(0);
+                Element dateElement = row.select(".vacancy-card__date").first();
+                String title = titleElement.text();
+                String linkDescription = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
+                String date = dateElement.child(0).attr("datetime");
+                String description = habrCareerParse.retrieveDescription(linkDescription);
+                LocalDateTime created = new HabrCareerDateTimeParser().parse(date);
+                Post post = new Post(title, linkDescription, description, created);
+                posts.add(post);
+            });
+        }
+        return posts;
+    }
 
     /**
      * Connection connection = Jsoup.connect(PAGE_LINK);
@@ -48,31 +82,20 @@ public class HabrCareerParse {
      * @throws IOException исключения
      */
     public static void main(String[] args) throws IOException {
-        for (int i = 1; i < 6; i++) {
-            Connection connection = Jsoup.connect(String.format("%s%s", PAGE_LINK, i));
-            Document document = connection.get();
-            Elements rows = document.select(".vacancy-card__inner");
-            rows.forEach(row -> {
-                Element titleElement = row.select(".vacancy-card__title").first();
-                Element linkElement = titleElement.child(0);
-                Element dateElement = row.select(".vacancy-card__date").first();
-            /*
-            Element dateElement = row.child(0);
-             */
-                String vacancyName = titleElement.text();
-                String link = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
-            /*
-            String date = dateElement.text();
-             */
-                String date = dateElement.child(0).attr("datetime");
-                System.out.printf("%s %s %s%n", vacancyName, link, date);
-            });
-        }
+        HabrCareerDateTimeParser habrCareerDateTimeParser = new HabrCareerDateTimeParser();
+        HabrCareerParse habrCareerParse = new HabrCareerParse(habrCareerDateTimeParser);
+        List<Post> list = habrCareerParse.list(PAGE_LINK);
+        list.forEach(System.out::println);
     }
 
-    private String retrieveDescription(String link) throws IOException {
+    private String retrieveDescription(String link) {
         Connection connection = Jsoup.connect(link);
-        Document document = connection.get();
+        Document document = null;
+        try {
+            document = connection.get();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         Element descriptionElement = document.select(".job_show_description__vacancy_description").first();
         return descriptionElement.text();
     }
