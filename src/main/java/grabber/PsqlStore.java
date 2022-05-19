@@ -101,20 +101,17 @@ public class PsqlStore implements Store, AutoCloseable {
         PsqlStore psqlStore = new PsqlStore(config);
         Post first = new Post("Android разработчик",
                 "https://career.habr.com/vacancies/1000097828",
-                """
-                        myTarget и AdTech - самая крупная в РФ рекламная сеть, мы создали такие SDK как:
-                        https://github.com/myTargetSDK... и https://github.com/myTrackerSD...
-                        Мы написали адаптеры для таких сетей, как Admob, Facebook, Unity,IronSource, Mintegral, InMobi и TikTok.\s
-                        """,
+                "myTarget и AdTech - самая крупная в РФ рекламная сеть, мы создали такие SDK как:\n"
+                + "https://github.com/myTargetSDK... и https://github.com/myTrackerSD...\n"
+                + "Мы написали адаптеры для таких сетей, как Admob, Facebook, Unity,IronSource, Mintegral, InMobi и TikTok. \n",
                 LocalDateTime.now());
         Post second = new Post("Java Developer",
                 "https://career.habr.com/vacancies/1000103713",
-                """
-                        Чем предстоит заниматься:
-                        разработка и поддержка сервисов взаимодействия с клиентами на Java 8-17, Spring;
-                        участие в планировании микросервисной архитектуры;
-                        взаимодействие с разработчиками back/front, аналитиками, тестировщиками;
-                        участие в Code review.""",
+                "Чем предстоит заниматься:\n"
+                + "разработка и поддержка сервисов взаимодействия с клиентами на Java 8-17, Spring;\n"
+                + "участие в планировании микросервисной архитектуры;\n"
+                + "взаимодействие с разработчиками back/front, аналитиками, тестировщиками;\n"
+                + "участие в Code review.",
                 LocalDateTime.of(2022, 5, 19, 10, 0));
         psqlStore.save(first);
         psqlStore.save(second);
