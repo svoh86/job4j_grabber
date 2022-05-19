@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Класс описывает парсинг HTML страницы
@@ -57,7 +58,6 @@ public class HabrCareerParse implements Parse {
     @Override
     public List<Post> list(String link) {
         List<Post> posts = new ArrayList<>();
-        HabrCareerParse habrCareerParse = new HabrCareerParse(dateTimeParser);
         for (int i = 1; i <= NUMBER; i++) {
             Connection connection = Jsoup.connect(String.format("%s%s", link, i));
             Document document = null;
@@ -66,20 +66,20 @@ public class HabrCareerParse implements Parse {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            Elements rows = document.select(".vacancy-card__inner");
-            rows.forEach(row -> posts.add(getPost(habrCareerParse, row)));
+            Elements rows = Objects.requireNonNull(document).select(".vacancy-card__inner");
+            rows.forEach(row -> posts.add(getPost(row)));
         }
         return posts;
     }
 
-    private Post getPost(HabrCareerParse habrCareerParse, Element row) {
+    private Post getPost(Element row) {
         Element titleElement = row.select(".vacancy-card__title").first();
-        Element linkElement = titleElement.child(0);
+        Element linkElement = Objects.requireNonNull(titleElement).child(0);
         Element dateElement = row.select(".vacancy-card__date").first();
         String title = titleElement.text();
         String linkDescription = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
-        String date = dateElement.child(0).attr("datetime");
-        String description = habrCareerParse.retrieveDescription(linkDescription);
+        String date = Objects.requireNonNull(dateElement).child(0).attr("datetime");
+        String description = retrieveDescription(linkDescription);
         LocalDateTime created = this.dateTimeParser.parse(date);
         return new Post(title, linkDescription, description, created);
     }
@@ -92,8 +92,9 @@ public class HabrCareerParse implements Parse {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        Element descriptionElement = document.select(".job_show_description__vacancy_description").first();
-        return descriptionElement.text();
+        Element descriptionElement = Objects.requireNonNull(document).select(
+                ".job_show_description__vacancy_description").first();
+        return Objects.requireNonNull(descriptionElement).text();
     }
 
     public static void main(String[] args) {
