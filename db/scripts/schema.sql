@@ -1,4 +1,7 @@
-create table if not exists rabbit (
+create table if not exists post (
     id serial primary key,
-    created_date timestamp
+    name text,
+    text text,
+    link text unique,
+    created timestamp
 );
