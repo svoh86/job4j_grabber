@@ -47,6 +47,7 @@ public class HabrCareerParse implements Parse {
      */
     private static final String SOURCE_LINK = "https://career.habr.com";
     private static final String PAGE_LINK = String.format("%s/vacancies/java_developer?page=", SOURCE_LINK);
+    public static final int NUMBER = 5;
     private final DateTimeParser dateTimeParser;
 
     public HabrCareerParse(DateTimeParser dateTimeParser) {
@@ -54,12 +55,17 @@ public class HabrCareerParse implements Parse {
     }
 
     @Override
-    public List<Post> list(String link) throws IOException {
+    public List<Post> list(String link) {
         List<Post> posts = new ArrayList<>();
         HabrCareerParse habrCareerParse = new HabrCareerParse(dateTimeParser);
-        for (int i = 1; i < 6; i++) {
+        for (int i = 1; i <= NUMBER; i++) {
             Connection connection = Jsoup.connect(String.format("%s%s", link, i));
-            Document document = connection.get();
+            Document document = null;
+            try {
+                document = connection.get();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             Elements rows = document.select(".vacancy-card__inner");
             rows.forEach(row -> posts.add(getPost(habrCareerParse, row)));
         }
@@ -74,7 +80,7 @@ public class HabrCareerParse implements Parse {
         String linkDescription = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
         String date = dateElement.child(0).attr("datetime");
         String description = habrCareerParse.retrieveDescription(linkDescription);
-        LocalDateTime created = new HabrCareerDateTimeParser().parse(date);
+        LocalDateTime created = this.dateTimeParser.parse(date);
         return new Post(title, linkDescription, description, created);
     }
 
@@ -90,7 +96,7 @@ public class HabrCareerParse implements Parse {
         return descriptionElement.text();
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         HabrCareerDateTimeParser habrCareerDateTimeParser = new HabrCareerDateTimeParser();
         HabrCareerParse habrCareerParse = new HabrCareerParse(habrCareerDateTimeParser);
         List<Post> list = habrCareerParse.list(PAGE_LINK);
