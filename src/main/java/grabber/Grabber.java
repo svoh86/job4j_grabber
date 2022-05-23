@@ -26,6 +26,7 @@ import static org.quartz.TriggerBuilder.newTrigger;
  */
 public class Grabber implements Grab {
     private final Properties config = new Properties();
+    private final static String LINK_HABR = "https://career.habr.com/vacancies/java_developer?page=";
 
     /**
      * Метод чоздает объект PsqlStore, который получает в конструктор Properties
@@ -98,7 +99,7 @@ public class Grabber implements Grab {
             JobDataMap map = context.getJobDetail().getJobDataMap();
             Store store = (Store) map.get("store");
             Parse parse = (Parse) map.get("parse");
-            List<Post> posts = parse.list("https://career.habr.com/vacancies/java_developer?page=");
+            List<Post> posts = parse.list(LINK_HABR);
             posts.forEach(store::save);
         }
     }
