@@ -93,7 +93,7 @@ public class HabrCareerParse implements Parse {
             e.printStackTrace();
         }
         Element descriptionElement = Objects.requireNonNull(document).select(
-                ".job_show_description__vacancy_description").first();
+                ".vacancy-description__text").first();
         return Objects.requireNonNull(descriptionElement).text();
     }
 
